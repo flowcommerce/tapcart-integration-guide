@@ -2,6 +2,46 @@
 
 [Overview of Shopify Integrations](https://docs.flow.io/docs/integrate-with-shopify)
 
+## Establishing a Flow Experience
+Every international shopping experience with Flow starts with establishing where the customer is located and creating a session based on that geolocation. When any customer hits the page without Flow session data saved, send a POST to https://api.flow.io/sessions/organizations/fashionnova-sandbox containing a session_form in the body:
+
+```json
+"session_form": {
+  "fields": [
+    { "name": "ip", "type": "string", "required": false, "description": "If specified, we will geolocate the user by this IP address, and if successful, select the experience matching the country of the IP address." , "annotations": ["personal_data"]},
+    { "name": "experience", "type": "string", "required": false, "description": "If specified, we will render the items in the context of the experience with this key." },
+    { "name": "country", "type": "string", "required": false, "description": "The ISO 3166-3 country code. Case insensitive. See https://api.flow.io/reference/countries", "example": "CAN" },
+    { "name": "currency", "type": "string", "required": false, "description": "Iso 4217 3 currency code as defined in https://api.flow.io/reference/currencies If specified, translate the pricing to this currency. Translation occurs using the current spot rate for this currency from the base currency in the experience." },
+    { "name": "language", "type": "string", "required": false, "description": "ISO 639 2 language code as defined in https://api.flow.io/reference/languages If specified, translate content to this language (where available)", "example": "en" },
+    { "name": "locale", "type": "string", "required": false, "description": "Locale ID as defined in https://api.flow.io/reference/locales", "example": "en-US" },
+    { "name": "attributes", "type": "map[string]", "required": false },
+    { "name": "experiment", "type": "session_experiment_form", "required": false }
+  ]
+}
+```
+
+In response you should receive an organization_session:
+```json
+"organization_session": {
+  "description": "Represents a session created for an organization. Primary method to select an experience for a given user session and ensure that experience does not change throughout the user's activity. Provides authentication to objects created during this session (e.g. order).",
+  "fields": [
+    { "name": "id", "type": "string" },
+    { "name": "organization", "type": "string" },
+    { "name": "visitor", "type": "session_visitor" },
+    { "name": "visit", "type": "session_visit" },
+    { "name": "environment", "type": "io.flow.common.v0.enums.environment", "description": "The Flow organization environment", "example": "sandbox" },
+    { "name": "attributes", "type": "map[string]" },
+    { "name": "ip", "type": "string", "required": false, "description": "The latest IP Address associated with this session, if known" , "annotations": ["personal_data"]},
+    { "name": "local", "type": "local_session", "required": false },
+    { "name": "geo", "type": "session_geo", "required": false, "description": "The geolocated information for this particular session. Note will always be present. Marked optional for backwards compatibility"},
+    { "name": "experience", "type": "io.flow.experience.v0.models.experience_geo", "required": false, "description": "Present if the session maps to an enabled experience" },
+    { "name": "format", "type": "session_format", "required": false },
+    { "name": "experiment", "type": "session_experiment", "required": false }
+  ]
+},
+```
+
+Please cache this organization_session in the user's local storage. The most important piece of data returned here is the experience field. The experience is the value that Flow uses to determine which information to display to the user such as currency, pricing, tax, duties, availability, shipping options, payment options and more.
 
 ## Flow's Shopify Metafields and related models
 
@@ -117,10 +157,8 @@ Here are the possible item availability statuses:
 }
 ```
 
-### Redirecting to Checkout
-We have multiple options for redirecting users to checkout. The most secure recommendation for custom integrations is with our Checkout Token API [Redirecting with Checkout tokens](https://docs.flow.io/docs/redirect-users-to-checkout-ui#section-redirecting-with-checkout-tokens-server-side-redirects).
-
-To create a Checkout Token, use POST https://api.flow.io/fashionnova-sandbox/checkout/tokens with a body containing a checkout_token_form:
+## Redirecting to Checkout
+We have multiple options for redirecting users to checkout. The most secure recommendation for custom integrations is with our Checkout Token API. To create a Checkout Token, use POST https://api.flow.io/fashionnova-sandbox/checkout/tokens with a body containing a checkout_token_form:
 ```json
 "checkout_token_form": {
   "discriminator": "discriminator",
@@ -136,7 +174,31 @@ To create a Checkout Token, use POST https://api.flow.io/fashionnova-sandbox/che
 }
 ```
 
-checkout_token_form accepts one of two possible types, either with an order form (checkout_token_order_form) which creates a new order or a reference to an existing order form (checkout_token_reference_form):
+A successful POST to Checkout Token API should return a checkout_token:
+```json
+"checkout_token": {
+  "description": "Represents a secure token that can be used to redirect to Checkout UI",
+  "fields": [
+    { "name": "id", "type": "string", "description": "Cryptographically secure token to use when redirecting to checkout" },
+    { "name": "organization", "type": "io.flow.common.v0.models.organization_reference" },
+    { "name": "checkout", "type": "io.flow.common.v0.models.checkout_reference" },
+    { "name": "order", "type": "io.flow.experience.v0.models.order_number_reference", "deprecation": { "description": "Replaced by checkout" } },
+    { "name": "urls", "type": "checkout_urls" },
+    { "name": "expires_at", "type": "date-time-iso8601", "description": "The date / time on which this token expires" },
+    { "name": "session", "type": "io.flow.common.v0.models.session_reference" },
+    { "name": "customer", "type": "io.flow.common.v0.models.customer_reference", "required": false }
+  ]
+}
+```
+
+This excerpt from our Checkout Token guide explains how to use the returned checkout_token payload [Redirecting with Checkout tokens](https://docs.flow.io/docs/redirect-users-to-checkout-ui#section-redirecting-with-checkout-tokens-server-side-redirects).
+:
+"With the checkout token (the field 'id' which is a secure random string starting with F67), you can redirect to https://checkout.flow.io/tokens/:id to allow the user to complete checkout."
+
+### Checkout Creation and Redirect Forms
+The following section is a detailed list of all of the required and many of optional fields and respective models which can used when sending users to Flow Checkout UI.
+
+Checkout Token Order Form:
 ```json
 "checkout_token_order_form": {
   "description": "Use this form to securly pass order and optional customer information to be created or updated.",
@@ -179,6 +241,8 @@ checkout_token_form accepts one of two possible types, either with an order form
   ]
 }
 ```
+
+Checkout Token Reference Form:
 ```json
 "checkout_token_reference_form": {
   "description": "Use this form when order number and session id are known. Optional customer information will be created or updated.",
@@ -197,17 +261,6 @@ checkout_token_form accepts one of two possible types, either with an order form
         "type": "checkout_urls_form" 
     }
   ]
-}
-```
-
-Checkout URLS:
-```json
-"checkout_urls_form": {
-    "fields": [
-    { "name": "continue_shopping", "type": "string", "required": false, "description": "If specified, will be stored on the order in the attribute named 'flow_continue_shopping_url' and will be used as the target URL for when a user chooses to Continue Shopping from Flow Checkout UI" },
-    { "name": "confirmation", "type": "string", "required": false, "description": "If specified, will be stored on the order in the attribute named 'flow_confirmation_url' and indicates that instead of showing the Flow Checkout UI Confirmation page, we redirect to this URL instead." },
-    { "name": "invalid_checkout", "type": "string", "required": false, "description": "If specified, the user will be redirected to the Invalid Checkout URL when Checkout determines that it cannot proceed with accepting order (e.g. perhaps authorization expired, inventory out of stock, etc). This URL should expect an HTTP Post with an order_put_form as the body." }
-    ]
 }
 ```
 
@@ -375,6 +428,20 @@ Line Item Form:
 },
 ```
 
+### Supporting Attributes
+
+Checkout URLS:
+```json
+"checkout_urls_form": {
+    "fields": [
+    { "name": "continue_shopping", "type": "string", "required": false, "description": "If specified, will be stored on the order in the attribute named 'flow_continue_shopping_url' and will be used as the target URL for when a user chooses to Continue Shopping from Flow Checkout UI" },
+    { "name": "confirmation", "type": "string", "required": false, "description": "If specified, will be stored on the order in the attribute named 'flow_confirmation_url' and indicates that instead of showing the Flow Checkout UI Confirmation page, we redirect to this URL instead." },
+    { "name": "invalid_checkout", "type": "string", "required": false, "description": "If specified, the user will be redirected to the Invalid Checkout URL when Checkout determines that it cannot proceed with accepting order (e.g. perhaps authorization expired, inventory out of stock, etc). This URL should expect an HTTP Post with an order_put_form as the body." }
+    ]
+}
+```
+
+
 Money:
 ```json
 "money": {
@@ -385,6 +452,24 @@ Money:
   ]
 }
 ```
+
+Billing Address:
+```json
+"billing_address": {
+  "fields": [
+    { "name": "name", "type": "name", "description": "The name of the customer associated with the billing address", "required": false, "annotations": ["personal_data"] },
+    { "name": "streets", "type": "[string]", "description": "Array for street line 1, street line 2, etc., in order", "required": false, "annotations": ["personal_data"] },
+    { "name": "city", "type": "string", "required": false },
+    { "name": "province", "type": "string", "required": false },
+    { "name": "postal", "type": "string", "required": false },
+    { "name": "country", "type": "string", "required": false, "description": "The ISO 3166-3 country code. Case insensitive. See https://api.flow.io/reference/countries", "example": "CAN" },
+    { "name": "company", "type": "string", "description": "Business entity or organization name of this contact", "required": false , "annotations": ["personal_data"]}
+  ]
+}
+```
+
+### Discounts
+Flow supports item discounts of fixed amounts and by percentage. Please refer to the models below detailing how to build a discounts field.
 
 Discounts:
 ```json
@@ -419,7 +504,6 @@ Discount Offer:
 
 Discount Offer Percent:
 ```json
-Discount Offer Fixed:
 "discount_offer_fixed": {
   "fields": [
     { "name": "money", "type": "money" }
@@ -444,19 +528,4 @@ Discount Target:
     { "name": "shipping", "description": "Discount is targeting to shipping. Only applicable if the discount is provided at the order level." }
   ]
 }
-```
-
-Billing Address:
-```json
-"billing_address": {
-  "fields": [
-    { "name": "name", "type": "name", "description": "The name of the customer associated with the billing address", "required": false, "annotations": ["personal_data"] },
-    { "name": "streets", "type": "[string]", "description": "Array for street line 1, street line 2, etc., in order", "required": false, "annotations": ["personal_data"] },
-    { "name": "city", "type": "string", "required": false },
-    { "name": "province", "type": "string", "required": false },
-    { "name": "postal", "type": "string", "required": false },
-    { "name": "country", "type": "string", "required": false, "description": "The ISO 3166-3 country code. Case insensitive. See https://api.flow.io/reference/countries", "example": "CAN" },
-    { "name": "company", "type": "string", "description": "Business entity or organization name of this contact", "required": false , "annotations": ["personal_data"]}
-  ]
-},
 ```
