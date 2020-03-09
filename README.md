@@ -3,8 +3,13 @@
 [Overview of Shopify Integrations](https://docs.flow.io/docs/integrate-with-shopify)
 
 
-## Integrating with Shopify's Flow Metafields
+## Flow's Shopify Metafields and related models
 
+### Localized Item Pricing
+Excerpt from [Display Localized Pricing - Server Side](https://docs.flow.io/docs/display-localized-pricing#section-server-side):
+"All of the information from Flow is stored in a single String metafield. The data is compressed into a single value to ensure optimal performance when syncing information between Flow and Shopify. Since Shopify API enforces rate limits on how quickly it can provide data, having a single metafield per variant guarantees a deterministic amount of time to sync pricing information."
+
+Below is the model of the metafield we store for each Shopify variant: 
 ```json
 "shopify_variant_flow_metafield": {
     "description": "The shopify variant metafield defines the individual metafield values we write into Shopify for each variant. This model was introduced to enable server side rendering of content (e.g. the price on the product detail page). Each field in this model is available as its own metafield within a namespace named 'price_abc' where abc is a unique, short identifier for an experience.",
