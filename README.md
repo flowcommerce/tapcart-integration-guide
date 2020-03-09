@@ -76,6 +76,7 @@ Below is the model of the metafield we store for each Shopify variant:
 }
 ```
 
+Here are the possible subcatalog item statuses:
 ```json
 "subcatalog_item_status": {
     "description": "Status indicating availability of a subcatalog item in an experience.",
@@ -96,6 +97,7 @@ Below is the model of the metafield we store for each Shopify variant:
 }
 ```
 
+Here are the possible item availability statuses:
 ```json
 "item_availability_status": {
     "values": [
