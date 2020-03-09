@@ -1,6 +1,10 @@
 # Tapcart Integration Guide
+You may find it useful to review the basic integration guide for Shopify [Overview of Shopify Integrations](https://docs.flow.io/docs/integrate-with-shopify). For your custom integration with Flow, and more specifically Fashion Nova's existing Flow Organization, please refer to this guide which highlights the major pieces required:
+- Estabilishing a Flow Experience
+- Localizing Item Prices
+- Redirecting to Flow Checkout UI
 
-[Overview of Shopify Integrations](https://docs.flow.io/docs/integrate-with-shopify)
+There will likely be more integration points than just these three and we can help flesh out this documentation as we get a better understanding of the scope of your custom integration but here are the fundamentals to get started:
 
 ## Establishing a Flow Experience
 Every international shopping experience with Flow starts with establishing where the customer is located and creating a session based on that geolocation. When any customer hits the page without Flow session data saved, send a POST to https://api.flow.io/sessions/organizations/fashionnova-sandbox containing a session_form in the body:
@@ -43,9 +47,7 @@ In response you should receive an organization_session:
 
 Please cache this organization_session in the user's local storage. The most important piece of data returned here is the experience field. The experience is the value that Flow uses to determine which information to display to the user such as currency, pricing, tax, duties, availability, shipping options, payment options and more.
 
-## Flow's Shopify Metafields and related models
-
-### Localized Item Pricing
+## Localizing Item Prices
 Excerpt from [Display Localized Pricing - Server Side](https://docs.flow.io/docs/display-localized-pricing#section-server-side):
 "All of the information from Flow is stored in a single String metafield. The data is compressed into a single value to ensure optimal performance when syncing information between Flow and Shopify. Since Shopify API enforces rate limits on how quickly it can provide data, having a single metafield per variant guarantees a deterministic amount of time to sync pricing information."
 
@@ -157,7 +159,7 @@ Here are the possible item availability statuses:
 }
 ```
 
-## Redirecting to Checkout
+## Redirecting to Flow Checkout UI
 We have multiple options for redirecting users to checkout. The most secure recommendation for custom integrations is with our Checkout Token API. To create a Checkout Token, use POST https://api.flow.io/fashionnova-sandbox/checkout/tokens with a body containing a checkout_token_form:
 ```json
 "checkout_token_form": {
